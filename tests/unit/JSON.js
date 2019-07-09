@@ -37,50 +37,56 @@ const AmjsFactory           = require('@amjs/factory');
                 `Request configuration header ${header} values ${jsonHeaders[header]}`)
     );
 
-    sut.serialize({ body }, service);
+    sut.serialize({ body : null, method : 'PUT' }, service);
+    equal(service.request.body === JSON.stringify({}), true, 'serialize stringifies empty object as request payload');
+
+    sut.serialize({ body, method : 'POST' }, service);
     equal(service.request.body === JSON.stringify(body), true, 'serialize stringifies request payload');
 }());
 
 (async function()
 {
-    const raw = { key : 'value' };
-    const sut = new AmjsAjaxAdapterJSON();
-    const mockResponse = new Response(raw);
-    const badResponse = new BadResponse();
-    const validBadResponse = new ValidBadResponse({});
+    try
+    {
+        const raw = { key : 'value' };
+        const sut = new AmjsAjaxAdapterJSON();
+        const mockResponse = new Response(raw);
+        const service = {};
 
-    const service = {};
+        // OK
+        let response = await sut.unserialize(mockResponse, service);
+        equal(typeof service.response !== 'undefined', true, 'unserialize stores raw response into service object');
+        equal(service.response === JSON.stringify(raw), true, 'raw data is as expected');
+        equal(JSON.stringify(response) === JSON.stringify({ data : raw }),
+            true, 'In case of OK response, raw data is wrapped into { data : { raw }}');
 
-    let response = await sut.unserialize(await mockResponse.clone(), service);
-    equal(typeof service.response !== 'undefined', true, 'unserialize stores raw response into service object');
-    equal(service.response === JSON.stringify(raw), true, 'raw data is as expected');
-    equal(JSON.stringify(response) === JSON.stringify({ data : raw }),
-        true, 'In case of OK response, raw data is wrapped into { data : <raw> }');
+        // { Error }
+        const error = new Error('Mock Error');
+        response = await sut.unserialize(error, service);
+        equal(Array.isArray(response.errors) === true, true,
+            'If response is an {Error}, unserialize returns a pool of errors');
 
-    response = await sut.unserialize(await badResponse.clone(), service);
-    let expectedBadObject = {
-        errors : [
-            { code : 400, message : 'Invalid response' }
-        ]
-    };
-    equal(JSON.stringify(response) === JSON.stringify(expectedBadObject),
-        true, 'In case of ERROR, returns a pool of errors');
+        // Bad response object
+        response = await sut.unserialize({}, service);
+        equal(Array.isArray(response.errors) === true, true,
+            'If response is not a valid object, returns a pool of errors');
 
-    response = await sut.unserialize(await validBadResponse.clone(), service);
-    expectedBadObject = {
-        errors : [
-            { code : 401, message : 'Unauthorized' }
-        ]
-    };
-    equal(JSON.stringify(response) === JSON.stringify(expectedBadObject),
-        true, 'In case of service ERROR response, returns a pool of errors');
+        // JSON parse error
+        response = new RejectResponse();
+        response = await sut.unserialize(response, service);
+        equal(Array.isArray(response.errors) === true, true,
+            'If parsing response as JSON throws an {Error}, returns a pool of errors');
 
-    response = await sut.unserialize({}, service);
-    expectedBadObject = {
-        errors : [
-            { code : 500, message : 'Invalid response object' }
-        ]
-    };
-    equal(JSON.stringify(response) === JSON.stringify(expectedBadObject),
-        true, 'In case response is invalid, returns a pool of errors');
+        // Error response
+        response = new BadResponse(raw);
+        response = await sut.unserialize(response, service);
+        equal(Array.isArray(response.errors) === true, true,
+            'If response is an error response, returns a pool of errors');
+
+
+    }
+    catch (e)
+    {
+        console.error(`Error testing JSON: ${e}`);
+    }
 }());

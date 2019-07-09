@@ -18,7 +18,10 @@ class AmjsAjaxAdapterJSON extends AmjsAjaxAdapterBase
             'Content-Type'  : 'application/json; charset=utf-8'
         });
 
-        request.body = JSON.stringify(request.body || {});
+        if (['POST', 'PUT', 'PATCH'].includes(request.method))
+        {
+            request.body = JSON.stringify(request.body || {});
+        }
 
         super.serialize(request, service);
     }
@@ -30,44 +33,48 @@ class AmjsAjaxAdapterJSON extends AmjsAjaxAdapterBase
     {
         let raw;
         let error = null;
-        try
-        {
-            if (response && 'status' in response)
-            {
-                raw = await response.json()
-                    .catch(err => error = err);
 
-                if (error instanceof Error)
+        if (response instanceof Error)
+        {
+            error = {
+                code    : 500,
+                message : response.message
+            };
+        }
+        else
+        {
+            try
+            {
+                if ('status' in response)
                 {
-                    error = {
-                        code    : response.status,
-                        message : error.message
+                    raw = await response.json();
+                    if (response.status >= 400)
+                    {
+                        error = {
+                            code    : response.status,
+                            message : raw
+                        };
                     }
                 }
-
-                if (!error && response.status >= 400)
+                else
                 {
                     error = {
-                        code    : response.status,
-                        message : raw
+                        code    : 500,
+                        message : 'Invalid response object'
                     };
                 }
             }
-            else
+            catch (e)
             {
-                throw new Error('Invalid response object');
+                error = { code : 500, message : e.message };
             }
         }
-        catch (err)
-        {
-            error = { code : 500, message : err.message };
-        }
 
-        response = error
+        response = !!error
             ? { errors : [ error ]}
             : { data : raw };
 
-        service.response = JSON.stringify(raw || {});
+        this._serviceStore('response', service, JSON.stringify(raw || {}));
 
         return super.unserialize(response, service);
     }

@@ -29,6 +29,14 @@ class AmjsAjaxAdapterBase extends AmjsFactory
         $TOKEN = value;
     }
 
+    _serviceStore(prop = '', service, values)
+    {
+        if (service && typeof service === 'object')
+        {
+            service[`${AmjsFactory.is('AjaxService', service) ? '$' : ''}${prop}`] = values;
+        }
+    }
+
     /**
      * Applies configuration request object to service object.
      * Also transforms configuration request object into proper values.
@@ -45,7 +53,7 @@ class AmjsAjaxAdapterBase extends AmjsFactory
 
             const method = (request.method || 'GET').toUpperCase();
             const url = request.url
-                ? this.constructor.is('URL', request.url)
+                ? AmjsFactory.is('URL', request.url)
                     ? request.url.value
                     : request.url
                 : 'https://';
@@ -56,7 +64,7 @@ class AmjsAjaxAdapterBase extends AmjsFactory
                 config.body = request.body;
             }
 
-            service.request = config;
+            this._serviceStore('request', service, config);
         }
     }
 

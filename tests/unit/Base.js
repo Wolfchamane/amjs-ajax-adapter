@@ -53,3 +53,21 @@ const AmjsFactory           = require('@amjs/factory');
     equal(sut.unserialize() === undefined, true, 'By default, unserialize returns "undefined"');
     equal(sut.unserialize('foo') === 'foo', true, 'In other case, returns "response" argument value');
 }());
+
+(function()
+{
+    const sut = new AmjsAjaxAdapterBase();
+    const service = {};
+    const values = {};
+    class Mock
+    {};
+
+    sut._serviceStore();
+    sut._serviceStore('prop', service, values);
+    equal(service['prop'] === values, true, '_serviceStore saves plain property into object');
+
+    AmjsFactory.register('AjaxService', Mock);
+    const mockI = AmjsFactory.create('AjaxService');
+    sut._serviceStore('prop', mockI, values);
+    equal(mockI['$prop'] === values, true, '_serviceStore saves private property into AjaxService instance');
+}());

@@ -9,59 +9,49 @@ class Headers
 
 class Response
 {
-    constructor(values = {})
+    constructor(values)
     {
         this.status = 200;
         this.$value = JSON.stringify(values);
+        this.$error = 'Error';
     }
 
     clone()
     {
-        return new Promise(resolve => resolve(this));
+        return this;
     }
 
     json()
     {
-        return new Promise(resolve =>
-        {
-            resolve(JSON.parse(this.$value));
-        });
+        return !!this.$value ? JSON.parse(this.$value) : new Error(this.$error);
     }
 }
 
 class BadResponse extends Response
 {
-    constructor(values = {})
+    constructor(value)
     {
-        super(values);
+        super(value);
         this.status = 400;
-    }
-
-    json()
-    {
-        return new Promise((res, rej) =>
-        {
-            rej(new Error('Invalid response'));
-        });
+        this.$error = 'BadResponse'
     }
 }
 
-class ValidBadResponse extends BadResponse
+class RejectResponse extends BadResponse
 {
-    constructor(values = {})
-    {
-        super(values);
-        this.status = 401;
-    }
-
     json()
     {
-        return new Promise(resolve => resolve('Unauthorized'));
+        return new Promise(
+            (resolve, reject) =>
+            {
+                reject(new Error(this.$error));
+            }
+        );
     }
 }
 
 global.Headers              = global.Headers || Headers;
 global.Response             = global.Response || Response;
 global.BadResponse          = global.BadResponse || BadResponse;
-global.ValidBadResponse     = global.ValidBadResponse || ValidBadResponse;
+global.RejectResponse       = global.RejectResponse || RejectResponse;
 // ---- Global SETUP -----
