@@ -50,11 +50,13 @@ class AmjsAjaxAdapterBase extends AmjsFactory
                     : request.url
                 : 'https://';
 
-            const body = request.body;
+            const config = { headers, method, url };
+            if (request.body)
+            {
+                config.body = request.body;
+            }
 
-            service.request = {
-                headers, method, url, body
-            };
+            service.request = config;
         }
     }
 
