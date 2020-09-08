@@ -1,6 +1,6 @@
 {
     "name": "@amjs/ajax-adapter",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "Set up of AJAX request adapters",
     "keywords": [
         "nodejs",
